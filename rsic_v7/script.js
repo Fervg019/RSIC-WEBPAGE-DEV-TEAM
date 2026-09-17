@@ -17,6 +17,12 @@
       if(e.key==="Escape"&&head.classList.contains("open")){setOpen(false);menuBtn.focus();}
     });
     addEventListener("resize",()=>{if(innerWidth>1040)setOpen(false)});
+    // the links rise in one after another (CSS reads --n)
+    head.querySelectorAll(".site-nav a").forEach((a,i)=>a.style.setProperty("--n",i));
+    // a tap outside the open menu only closes it, so it can't open a card by accident
+    document.addEventListener("click",e=>{
+      if(head.classList.contains("open")&&!head.contains(e.target)){e.preventDefault();e.stopPropagation();setOpen(false);}
+    },true);
   }
 
   // countdown to Friday 13 November 2026, 1:45 PM PKT (RSIC runs 13 to 15 November); each number rolls in when it changes
@@ -75,6 +81,29 @@
       if(caption)caption.textContent=node.dataset.caption||"";
     };
     labNodes.forEach(n=>["mouseenter","focus","click"].forEach(ev=>n.addEventListener(ev,()=>activate(n))));
+
+    // touch screens: the list scrolls under the pinned diagram, and the realm passing just below it draws its pattern
+    // (a quarter of the way into the free space, so the last realm still gets there before the list runs out)
+    const stage=document.querySelector(".lab-stage");
+    if(stage&&matchMedia("(hover: none)").matches){
+      const list=labNodes[0].parentElement;
+      let queued=false;
+      const spy=()=>{
+        queued=false;
+        const s=stage.getBoundingClientRect(),l=list.getBoundingClientRect();
+        const stacked=s.left<l.right&&s.right>l.left;
+        const top=Math.max(s.bottom,0);
+        const line=stacked?top+(innerHeight-top)*.25:innerHeight/2;
+        if(l.top>line||l.bottom<line)return;
+        let best=null,bestD=Infinity;
+        for(const n of labNodes){
+          const r=n.getBoundingClientRect(),d=Math.abs(r.top+r.height/2-line);
+          if(d<bestD){bestD=d;best=n;}
+        }
+        if(best&&!best.classList.contains("active"))activate(best);
+      };
+      addEventListener("scroll",()=>{if(!queued){queued=true;requestAnimationFrame(spy);}},{passive:true});
+    }
   }
 
   // register: delegate / school toggle
@@ -119,6 +148,7 @@
 (()=>{
   const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
   const finePointer=matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const touchUI=matchMedia("(hover: none)").matches;
   const head=document.querySelector(".site-head");
 
   // header tightens after you scroll, and a thin pink line shows how far down the page you are
@@ -140,6 +170,8 @@
   }
 
   // RSIC wordmark: draws itself in on load, then the letters hop and the dot bounces whenever you point at it
+  // (on a touch screen: when you tap it, when the menu opens, and when the footer one scrolls into view)
+  const waves=new Map();
   document.querySelectorAll(".logo").forEach(logo=>{
     const paths=[...logo.querySelectorAll("path")];
     paths.forEach((p,i)=>{
@@ -151,15 +183,104 @@
       if(e.target instanceof Element&&e.target.classList.contains("dot"))logo.classList.remove("draw","wave");
     });
     if(!reduce&&head&&head.contains(logo))play("draw");
-    logo.addEventListener("pointerenter",()=>{if(!logo.classList.contains("draw"))play("wave");});
+    const wave=()=>{if(!logo.classList.contains("draw"))play("wave");};
+    logo.addEventListener("pointerenter",wave);
+    waves.set(logo,wave);
   });
+  const menuBtn=document.querySelector(".menu-btn");
+  const headLogo=head&&head.querySelector(".logo");
+  if(menuBtn&&headLogo)menuBtn.addEventListener("click",()=>{if(head.classList.contains("open"))waves.get(headLogo)();});
 
-  // the big RSIC on the homepage: each letter nudges up when you point at it
+  // the big RSIC on the homepage: each letter nudges up when you point at it, or hops when you tap it
   const heroTitle=document.querySelector(".hero-title");
-  if(heroTitle&&!heroTitle.querySelector(".hl")){
-    const word=heroTitle.textContent.trim();
-    heroTitle.setAttribute("aria-label",word);
-    heroTitle.innerHTML=[...word].map(c=>`<span class="hl" aria-hidden="true">${c}</span>`).join("");
+  if(heroTitle){
+    if(!heroTitle.querySelector(".hl")){
+      const word=heroTitle.textContent.trim();
+      heroTitle.setAttribute("aria-label",word);
+      heroTitle.innerHTML=[...word].map((c,i)=>`<span class="hl" style="--i:${i}" aria-hidden="true">${c}</span>`).join("");
+    }
+    heroTitle.addEventListener("pointerdown",e=>{
+      const hl=e.pointerType!=="mouse"&&e.target instanceof Element&&e.target.closest(".hl");
+      if(hl){hl.classList.remove("pop");void hl.offsetWidth;hl.classList.add("pop");}
+    });
+    heroTitle.addEventListener("animationend",e=>{if(e.target instanceof Element)e.target.classList.remove("pop");});
+    // with no hover to discover them, the letters say hello once after the wordmark has drawn itself
+    if(touchUI&&!reduce)setTimeout(()=>{heroTitle.classList.add("hello");setTimeout(()=>heroTitle.classList.remove("hello"),1500);},1100);
+  }
+
+  const SPOT=".realm-strip a,.map a,.principles>div,.disc-list a,.realm-card,.glyph-panel,.facts>div,.pager a,.exp-list li,.org-node,.lab-node,.tile,.info-card,.faq-item,.countdown-grid>div";
+
+  // touch: pressing a box lights it from under your finger and sinks it slightly; a quick tap shows the same.
+  // The class waits 70ms, so a scroll that starts on a card doesn't flash it.
+  const PRESS=SPOT+",.btn,.menu-btn,.site-nav a,.reg-switch button,.foot-links a,.crumb a,.logo";
+  let press=null;
+  const clearPress=()=>{
+    if(!press)return;
+    clearTimeout(press.timer);
+    if(press.el)press.el.classList.remove("is-pressed");
+    press=null;
+  };
+  document.addEventListener("pointerdown",e=>{
+    if(e.pointerType==="mouse"||!e.isPrimary)return;
+    clearPress();
+    const el=e.target instanceof Element?e.target.closest(PRESS):null;
+    press={el,x:e.clientX,y:e.clientY,timer:0};
+    if(!el)return;
+    const r=el.getBoundingClientRect();
+    el.style.setProperty("--mx",`${e.clientX-r.left}px`);
+    el.style.setProperty("--my",`${e.clientY-r.top}px`);
+    press.timer=setTimeout(()=>el.classList.add("is-pressed"),70);
+  },{passive:true});
+  document.addEventListener("pointermove",e=>{
+    if(press&&e.pointerType!=="mouse"&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>10)clearPress();
+  },{passive:true});
+  document.addEventListener("pointercancel",clearPress);
+  document.addEventListener("pointerup",e=>{
+    if(!press||e.pointerType==="mouse")return;
+    const {el,timer}=press;
+    press=null;
+    clearTimeout(timer);
+    document.dispatchEvent(new CustomEvent("rsic:tap",{detail:{x:e.clientX,y:e.clientY}}));
+    if(!el)return;
+    el.classList.add("is-pressed");
+    setTimeout(()=>el.classList.remove("is-pressed"),220);
+  });
+  // coming back with the browser's back button shouldn't leave anything pressed
+  addEventListener("pageshow",()=>document.querySelectorAll(".is-pressed").forEach(el=>el.classList.remove("is-pressed")));
+
+  if(touchUI){
+    // headings draw their squiggle, glyphs turn and the footer wordmark hops, once, as they scroll into view
+    if("IntersectionObserver" in window){
+      const seen=new IntersectionObserver(entries=>entries.forEach(en=>{
+        if(!en.isIntersecting)return;
+        seen.unobserve(en.target);
+        if(waves.has(en.target))waves.get(en.target)();
+        else en.target.classList.add("in-view");
+      }),{rootMargin:"0px 0px -12% 0px",threshold:.5});
+      document.querySelectorAll(".page-head,.section-head,.cta-band-inner,.exp-head,.countdown-inner,.realm-cta,.glyph-panel,.site-foot .logo").forEach(el=>seen.observe(el));
+    }
+
+    // the box crossing the middle of the screen gets the look a mouse would give it (one per group)
+    const groups=[".realm-grid .realm-card",".realm-strip a",".map a",".principles>div",".disc-list a",".exp-list li",".org-node",".timeline li",".gallery .tile",".reg-side>div",".pager a"]
+      .map(sel=>[...document.querySelectorAll(sel)]).filter(g=>g.length);
+    if(groups.length){
+      let queued=false;
+      const focus=()=>{
+        queued=false;
+        const line=innerHeight*.48;
+        for(const g of groups){
+          let best=null,bestD=Infinity;
+          for(const el of g){
+            const r=el.getBoundingClientRect();
+            if(r.bottom<line-20||r.top>line+20)continue;
+            const d=Math.abs(r.top+r.height/2-line);
+            if(d<bestD){bestD=d;best=el;}
+          }
+          for(const el of g)if((el===best)!==el.classList.contains("is-focus"))el.classList.toggle("is-focus",el===best);
+        }
+      };
+      addEventListener("scroll",()=>{if(!queued){queued=true;requestAnimationFrame(focus);}},{passive:true});
+    }
   }
 
   if(!finePointer)return;
@@ -178,7 +299,6 @@
   });
 
   // spotlight: cards light up softly under the cursor
-  const SPOT=".realm-strip a,.map a,.principles>div,.disc-list a,.realm-card,.glyph-panel,.facts>div,.pager a,.exp-list li,.org-node,.lab-node,.tile,.info-card,.faq-item,.countdown-grid>div";
   document.addEventListener("pointermove",e=>{
     const el=e.target instanceof Element&&e.target.closest(SPOT);
     if(!el)return;
@@ -243,7 +363,8 @@
       const tw=reduce?.8:.35+.65*Math.max(0,Math.sin(sec*s.sp+s.ph));
       ctx.globalAlpha=.55*tw;
       ctx.fillStyle=s.pink?"#d0768f":"#a9c8ef";
-      sparkle(s.x*w+px*s.depth*1.4,s.y*h+py*s.depth*1.4,s.size*(.7+.3*tw));
+      const x=((s.x*w+px*s.depth*1.4)%w+w)%w,y=((s.y*h+py*s.depth*1.4)%h+h)%h;
+      sparkle(x,y,s.size*(.7+.3*tw));
     }
     ctx.globalAlpha=1;
   };
@@ -279,7 +400,17 @@
     it.cy=it.s.y/100*innerHeight+it.s.size/2;
   });
   place();
-  addEventListener("resize",()=>{resize();stars=makeStars();place();if(reduce)drawSky(0);});
+  // phone browsers resize the page whenever the address bar slides away; only a new width gets a fresh sky,
+  // a new height just stretches the old one, so the stars don't jump while you scroll
+  let skyW=w;
+  addEventListener("resize",()=>{
+    const oldH=h;
+    resize();
+    if(w!==skyW){skyW=w;stars=makeStars();}
+    else if(oldH)for(const s of stars)s.y*=h/oldH;
+    place();
+    if(reduce)drawSky(0);
+  });
   if(reduce)drawSky(0);
 
   // 3. the RSIC head artwork: hand-drawn doodles like the poster's, a tilt toward the cursor, and a spin of the doodles when clicked
@@ -309,7 +440,16 @@
       return {el,depth:s.depth};
     });
     fig.appendChild(wrap);
-    fig.addEventListener("click",()=>{fig.classList.remove("burst");void fig.offsetWidth;fig.classList.add("burst");});
+    let awakeTimer=0;
+    fig.addEventListener("click",()=>{
+      fig.classList.remove("burst");void fig.offsetWidth;fig.classList.add("burst");
+      // no hover on a touch screen, so a tap also wakes the artwork for a moment: halo up, doodles out
+      if(!finePointer){
+        fig.classList.add("awake");
+        clearTimeout(awakeTimer);
+        awakeTimer=setTimeout(()=>fig.classList.remove("awake"),1800);
+      }
+    });
     fig.addEventListener("animationend",e=>{if(e.animationName==="doodle-spin")fig.classList.remove("burst");});
   }
 
@@ -322,31 +462,76 @@
     layer.after(glow);
   }
 
+  // 5. touch screens: a tap sends a faint bloom of light through the sky, and nearby drawings drift out of its way
+  const tap={x:0,y:0,until:0};
+  if(!finePointer){
+    const bloom=document.createElement("div");
+    bloom.className="touch-bloom";
+    bloom.setAttribute("aria-hidden","true");
+    layer.after(bloom);
+    document.addEventListener("rsic:tap",e=>{
+      tap.x=e.detail.x;tap.y=e.detail.y;tap.until=performance.now()+900;
+      bloom.style.left=`${tap.x}px`;bloom.style.top=`${tap.y}px`;
+      bloom.classList.remove("on");void bloom.offsetWidth;bloom.classList.add("on");
+    });
+  }
+
   // with reduced motion and no mouse there is nothing left to animate
   if(reduce&&!finePointer)return;
 
-  let gx=pointer.x,gy=pointer.y;
+  // phones have no cursor to follow, so the artwork leans with the phone itself where the browser shares that
+  // without a permission prompt (Android), and tips as you scroll past it everywhere
+  const orient={x:0,y:0,on:false};
+  if(!finePointer&&heroImg&&"DeviceOrientationEvent" in window&&typeof DeviceOrientationEvent.requestPermission!=="function"){
+    let base=null;
+    addEventListener("deviceorientation",e=>{
+      if(e.beta==null||e.gamma==null)return;
+      if(base===null)base=e.beta;
+      base+=(e.beta-base)*.004;   // slowly re-centres, so however you hold the phone counts as level
+      orient.x=Math.max(-1,Math.min(1,e.gamma/20));
+      orient.y=Math.max(-1,Math.min(1,(e.beta-base)/20));
+      orient.on=true;
+    });
+  }
+
+  let gx=pointer.x,gy=pointer.y,lastScroll=scrollY,drag=0;
   const tilt={x:0,y:0};
   const frame=t=>{
     if(!reduce){
-      const tx=finePointer&&pointer.active?-(pointer.x-w/2)*.02:0;
-      const ty=finePointer&&pointer.active?-(pointer.y-h/2)*.02:0;
-      px+=(tx-px)*.04;py+=(ty-py)*.04;
+      if(finePointer){
+        const tx=pointer.active?-(pointer.x-w/2)*.02:0;
+        const ty=pointer.active?-(pointer.y-h/2)*.02:0;
+        px+=(tx-px)*.04;py+=(ty-py)*.04;
+      }else{
+        // touch: the stars scroll a little with the page, deeper ones slower, so the sky has depth
+        py+=(-scrollY*.1-py)*.18;
+      }
       drawSky(t);
+
+      // touch: the drawings sway with the scroll position and trail a little behind fast scrolls
+      const v=scrollY-lastScroll;
+      lastScroll=scrollY;
+      drag+=(Math.max(-40,Math.min(40,-v*.8))-drag)*.1;
+      const tapping=!finePointer&&performance.now()<tap.until;
+      const target=finePointer?pointer:tap;
       const mx=pointer.x-innerWidth/2,my=pointer.y-innerHeight/2;
-      for(const it of items){
-        // gentle parallax (deeper shapes move more), plus a soft push away from the pointer
-        let ix=finePointer?-mx*it.s.depth*.02:0,iy=finePointer?-my*it.s.depth*.02:0,near=0;
-        if(finePointer&&pointer.active){
-          const dx=it.cx+ix-pointer.x,dy=it.cy+iy-pointer.y,dist=Math.hypot(dx,dy)||1,reach=it.s.size/2+140;
+      const shrink=!finePointer&&innerWidth<=760?" scale(.7)":"";
+      items.forEach((it,i)=>{
+        // gentle parallax (deeper shapes move more), plus a soft push away from the pointer or the tap
+        let ix,iy,near=0;
+        if(finePointer){ix=-mx*it.s.depth*.02;iy=-my*it.s.depth*.02;}
+        else{
+          ix=Math.sin(scrollY*.0011+i*1.7)*16*it.s.depth;
+          iy=drag*it.s.depth+Math.cos(scrollY*.0009+i)*20*it.s.depth;
+        }
+        if(finePointer?pointer.active:tapping){
+          const dx=it.cx+ix-target.x,dy=it.cy+iy-target.y,dist=Math.hypot(dx,dy)||1,reach=it.s.size/2+140;
           if(dist<reach){const f=1-dist/reach;ix+=dx/dist*f*30;iy+=dy/dist*f*30;near=f;}
         }
         it.x+=(ix-it.x)*.06;it.y+=(iy-it.y)*.06;it.near+=(near-it.near)*.08;
-        if(finePointer){
-          it.el.style.transform=`translate3d(${it.x.toFixed(1)}px,${it.y.toFixed(1)}px,0)`;
-          it.el.style.setProperty("--near",it.near.toFixed(3));
-        }
-      }
+        it.el.style.transform=`translate3d(${it.x.toFixed(1)}px,${it.y.toFixed(1)}px,0)${shrink}`;
+        it.el.style.setProperty("--near",it.near.toFixed(3));
+      });
     }
 
     if(glow){
@@ -356,13 +541,21 @@
       glow.classList.toggle("on",pointer.active);
     }
 
-    if(heroImg&&finePointer){
+    if(heroImg){
       // the artwork turns a little to face the cursor, and the doodles drift further than the head for depth
       const r=fig.getBoundingClientRect();
       let nx=0,ny=0;
-      if(pointer.active&&r.bottom>0&&r.top<innerHeight){
-        nx=Math.max(-1,Math.min(1,(pointer.x-(r.left+r.width/2))/(r.width*.9)));
-        ny=Math.max(-1,Math.min(1,(pointer.y-(r.top+r.height/2))/(r.height*.9)));
+      if(r.bottom>0&&r.top<innerHeight){
+        if(finePointer){
+          if(pointer.active){
+            nx=Math.max(-1,Math.min(1,(pointer.x-(r.left+r.width/2))/(r.width*.9)));
+            ny=Math.max(-1,Math.min(1,(pointer.y-(r.top+r.height/2))/(r.height*.9)));
+          }
+        }else{
+          // touch: tilt the phone and the head follows; scroll it up and it tips forward while the doodles rise past it
+          if(orient.on){nx=orient.x;ny=orient.y*.6;}
+          ny=Math.max(-1,Math.min(1,ny+((r.top+r.height/2)/innerHeight-.5)*2.2));
+        }
       }
       tilt.x+=(nx-tilt.x)*.07;tilt.y+=(ny-tilt.y)*.07;
       heroImg.style.transform=`perspective(1200px) rotateY(${(tilt.x*9).toFixed(2)}deg) rotateX(${(-tilt.y*7).toFixed(2)}deg) translate3d(${(tilt.x*10).toFixed(1)}px,${(tilt.y*8).toFixed(1)}px,0)`;

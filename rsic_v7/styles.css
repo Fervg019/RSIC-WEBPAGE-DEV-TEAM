@@ -44,6 +44,8 @@ a{color:inherit}
 p{margin:0 0 1em}
 ::selection{background:var(--pink);color:var(--on-pink)}
 :focus-visible{outline:2px solid var(--pink);outline-offset:3px}
+/* touch screens get their own press feedback (below), so the grey tap flash goes */
+a,button,select,input,.hero-poster,.hero-title{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 
 /* base layer: V5's night sky, pulled towards the navy of the Instagram posts */
 body::before{
@@ -71,6 +73,10 @@ body::after{
 @keyframes ambient-spin{to{transform:rotate(360deg)}}
 .cursor-glow{position:fixed;left:0;top:0;z-index:-1;width:680px;height:680px;margin:-340px 0 0 -340px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(127,176,230,.07) 0%,rgba(208,118,143,.03) 40%,transparent 70%);opacity:0;transition:opacity .6s ease;will-change:transform}
 .cursor-glow.on{opacity:1}
+/* phones: a tap sends the same faint light through the sky, then it fades */
+.touch-bloom{position:fixed;left:0;top:0;z-index:-1;width:380px;height:380px;margin:-190px 0 0 -190px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(127,176,230,.13) 0%,rgba(208,118,143,.05) 40%,transparent 70%);opacity:0}
+.touch-bloom.on{animation:bloom 1.2s var(--ease) both}
+@keyframes bloom{0%{opacity:0;transform:scale(.45)}22%{opacity:1}100%{opacity:0;transform:scale(1.15)}}
 
 /* layout helpers */
 .wrap{max-width:var(--max);margin-left:auto;margin-right:auto;padding-left:var(--gutter);padding-right:var(--gutter)}
@@ -78,7 +84,9 @@ body::after{
 .tight-top{padding-top:0}
 .label{display:flex;align-items:center;gap:10px;font:600 .9rem/1.2 var(--sans);letter-spacing:.01em;color:var(--text-soft);margin:0 0 16px}
 .label::before{content:"";flex:none;width:13px;height:13px;background:var(--sparkle) center/contain no-repeat;transition:transform .7s var(--spring)}
-.page-head:hover .label::before,.section-head:hover .label::before,.exp-head:hover .label::before{transform:rotate(90deg) scale(1.2)}
+@media (hover:hover){.page-head:hover .label::before,.section-head:hover .label::before,.exp-head:hover .label::before{transform:rotate(90deg) scale(1.2)}}
+/* on touch screens the sparkle turns once as its heading scrolls into view */
+.page-head.in-view .label::before,.section-head.in-view .label::before,.exp-head.in-view .label::before{transform:rotate(90deg);transition-delay:.15s}
 
 /* header: a dark translucent bar; it tightens once you scroll and a pink line tracks how far down the page you are */
 .site-head{position:sticky;top:0;z-index:60;background:rgba(4,11,26,.72);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid rgba(243,238,232,.07);transition:background-color .4s ease}
@@ -88,11 +96,11 @@ body::after{
 .scroll-line{position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--pink);border-radius:0 2px 2px 0;transform:scaleX(var(--progress,0));transform-origin:left;pointer-events:none}
 
 /* wordmark: draws itself in when the page opens, letters hop and the dot bounces on hover, and it leans toward the cursor */
-.logo{display:block;width:92px;color:var(--text);translate:var(--bx,0) var(--by,0);transition:translate .45s var(--ease),color .3s ease}
+.logo{display:block;width:92px;padding:8px 0;margin:-8px 0;color:var(--text);translate:var(--bx,0) var(--by,0);transition:translate .45s var(--ease),color .3s ease,transform .25s var(--ease)}
 .logo svg{display:block;width:100%;height:auto;overflow:visible}
 .logo path{transform-box:fill-box;transform-origin:50% 100%}
 .logo .dot{fill:var(--pink);transform-box:fill-box;transform-origin:50% 100%}
-.logo:hover{color:#fff}
+@media (hover:hover){.logo:hover{color:#fff}}
 .logo.draw path{stroke-dasharray:var(--len);animation:logo-draw 1s var(--ease) both;animation-delay:calc(var(--i) * 110ms)}
 .logo.draw .dot{animation:dot-pop .5s var(--spring) .9s both}
 .logo.wave path{animation:letter-hop .6s var(--ease) both;animation-delay:calc(var(--i) * 55ms)}
@@ -105,34 +113,55 @@ body::after{
 .site-nav{display:flex;flex-wrap:wrap;align-items:center;gap:6px 26px;font:600 .92rem/1 var(--sans)}
 .site-nav a{position:relative;text-decoration:none;color:var(--text-soft);padding:8px 0;transition:color .25s ease}
 .site-nav a:not(.nav-cta)::after{content:"";position:absolute;left:-3px;right:-3px;bottom:-4px;height:8px;background:var(--squiggle) no-repeat center/100% 100%;clip-path:inset(0 100% 0 0);transition:clip-path .45s var(--ease)}
-.site-nav a:hover,.site-nav a[aria-current="page"]{color:var(--text)}
-.site-nav a:hover::after,.site-nav a[aria-current="page"]::after{clip-path:inset(0 0 0 0)}
-.site-nav .nav-cta{color:var(--on-pink);background:var(--pink);padding:10px 18px;border-radius:999px;translate:var(--bx,0) var(--by,0);transition:background-color .25s ease,translate .35s var(--ease)}
-.site-nav .nav-cta:hover,.site-nav .nav-cta[aria-current="page"]{color:var(--on-pink);background:var(--pink-light)}
-.menu-btn{display:none;font:600 .95rem/1 var(--sans);color:var(--text);background:transparent;border:1px solid var(--edge-strong);border-radius:999px;padding:10px 18px;cursor:pointer}
+.site-nav a[aria-current="page"]{color:var(--text)}
+.site-nav a[aria-current="page"]::after,.site-nav a.is-pressed::after{clip-path:inset(0 0 0 0)}
+.site-nav .nav-cta{color:var(--on-pink);background:var(--pink);padding:10px 18px;border-radius:999px;translate:var(--bx,0) var(--by,0);transition:background-color .25s ease,translate .35s var(--ease),transform .25s var(--ease)}
+.site-nav .nav-cta[aria-current="page"],.site-nav .nav-cta.is-pressed{color:var(--on-pink);background:var(--pink-light)}
+@media (hover:hover){
+  .site-nav a:hover{color:var(--text)}
+  .site-nav a:hover::after{clip-path:inset(0 0 0 0)}
+  .site-nav .nav-cta:hover{color:var(--on-pink);background:var(--pink-light)}
+}
+/* the phone menu button: two short lines that cross into an X while the menu is open */
+.menu-btn{display:none;position:relative;min-height:44px;font:600 .95rem/1 var(--sans);color:var(--text);background:transparent;border:1px solid var(--edge-strong);border-radius:999px;padding:10px 18px 10px 42px;cursor:pointer;transition:border-color .3s ease,background-color .3s ease,transform .25s var(--ease)}
+.menu-btn::before,.menu-btn::after{content:"";position:absolute;left:18px;top:50%;width:15px;height:1.6px;margin-top:-.8px;border-radius:2px;background:currentColor;transition:transform .4s var(--spring)}
+.menu-btn::before{transform:translateY(-3.5px)}
+.menu-btn::after{transform:translateY(3.5px)}
+.menu-btn[aria-expanded="true"]{border-color:var(--pink);background:rgba(208,118,143,.1)}
+.menu-btn[aria-expanded="true"]::before{transform:rotate(45deg)}
+.menu-btn[aria-expanded="true"]::after{transform:rotate(-45deg)}
 @media (max-width:1040px){
   .has-menu .menu-btn{display:inline-block}
   .has-menu .site-nav{display:none;flex-basis:100%;flex-direction:column;align-items:flex-start;gap:4px;padding:6px 0 18px}
-  .has-menu .site-head.open .site-nav{display:flex}
+  .has-menu .site-head.open .site-nav{display:flex;max-height:calc(100vh - 80px);max-height:calc(100dvh - 80px);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
   .has-menu .site-nav a{font:600 1.6rem/1.25 var(--serif);color:var(--text)}
-  .has-menu .site-nav a::after{display:none}
+  /* links rise in one after another; the current page keeps its squiggle and a tapped link draws one */
+  .has-menu .site-head.open .site-nav a{animation:menu-in .5s var(--ease) backwards;animation-delay:calc(var(--n,0) * 35ms)}
+  .has-menu .site-nav a::after{left:0;right:0;bottom:4px}
   .has-menu .site-nav .nav-cta{margin-top:12px;font:600 1rem/1 var(--sans)}
 }
+@keyframes menu-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 
 /* buttons and links; the main buttons are gently pulled toward the cursor (script.js sets --bx/--by) */
 .btn{display:inline-flex;align-items:center;gap:8px;font:600 1rem/1 var(--sans);color:var(--on-pink);background:var(--pink);padding:16px 26px;border:0;border-radius:var(--r-sm);text-decoration:none;cursor:pointer;translate:var(--bx,0) var(--by,0);transition:transform .25s var(--ease),translate .35s var(--ease),background-color .25s ease,color .25s ease,box-shadow .25s ease}
-.btn:hover{background:var(--pink-light)}
 .btn:active{transform:scale(.97)}
+.btn.is-pressed{transform:scale(.95);background:var(--pink-light)}
 .btn-ghost{background:transparent;color:var(--text);box-shadow:inset 0 0 0 1px var(--edge-strong)}
-.btn-ghost:hover{background:rgba(243,238,232,.06);color:var(--text);box-shadow:inset 0 0 0 1px var(--pink)}
+.btn-ghost.is-pressed{background:rgba(243,238,232,.06);box-shadow:inset 0 0 0 1px var(--pink)}
 .text-link{font-weight:600;color:var(--text);text-decoration:underline;text-decoration-color:var(--pink);text-decoration-thickness:1.5px;text-underline-offset:4px;transition:color .2s ease}
-.text-link:hover{color:var(--pink-light)}
+@media (hover:hover){
+  .btn:hover{background:var(--pink-light)}
+  .btn-ghost:hover{background:rgba(243,238,232,.06);color:var(--text);box-shadow:inset 0 0 0 1px var(--pink)}
+  .text-link:hover{color:var(--pink-light)}
+}
 
 /* type: bold classic serif with one italic pink phrase per big heading, like the posts */
 h1,h2,h3{font-family:var(--serif);font-weight:600;line-height:1.04;letter-spacing:-.01em;margin:0;text-wrap:balance}
 h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
 .page-title em,.section-head h2 em,.cta-band h2 em,.exp-head h1 em,.countdown h2 em,.realm-cta h2 em{padding-bottom:.06em;background:var(--squiggle) no-repeat 0 100%/0% .2em;transition:background-size .7s var(--ease)}
-.page-head:hover .page-title em,.section-head:hover h2 em,.cta-band-inner:hover h2 em,.exp-head:hover h1 em,.countdown-inner:hover h2 em,.realm-cta:hover h2 em{background-size:100% .2em}
+@media (hover:hover){.page-head:hover .page-title em,.section-head:hover h2 em,.cta-band-inner:hover h2 em,.exp-head:hover h1 em,.countdown-inner:hover h2 em,.realm-cta:hover h2 em{background-size:100% .2em}}
+/* touch screens: the squiggle draws itself once, as the heading scrolls into view */
+.page-head.in-view .page-title em,.section-head.in-view h2 em,.cta-band-inner.in-view h2 em,.exp-head.in-view h1 em,.countdown-inner.in-view h2 em,.realm-cta.in-view h2 em{background-size:100% .2em;transition-delay:.3s}
 .page-head{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:20px clamp(32px,6vw,96px);align-items:end;padding-top:clamp(48px,6vw,88px);padding-bottom:clamp(32px,4vw,56px)}
 .page-title{font-size:clamp(2.8rem,6.4vw,5.6rem);line-height:1;letter-spacing:-.015em;margin:0}
 .lede{font-size:clamp(1.05rem,1.4vw,1.2rem);line-height:1.65;color:var(--text-soft);max-width:46ch;margin:0}
@@ -150,18 +179,28 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
 .hero{position:relative;max-width:var(--max);margin:0 auto;min-height:min(calc(100vh - 70px),880px);padding:clamp(36px,5vw,72px) var(--gutter) clamp(48px,6vw,88px);display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);column-gap:clamp(24px,4vw,64px);align-items:center}
 .hero-title{grid-column:1;grid-row:1;align-self:end;font:700 clamp(5rem,12.5vw,10.5rem)/.86 var(--serif);letter-spacing:-.02em;margin:0;cursor:default}
 .hero-title .hl{display:inline-block;transition:transform .5s var(--spring),color .3s ease}
-.hero-title .hl:hover{transform:translateY(-.06em) rotate(-4deg);color:var(--pink-light)}
+@media (hover:hover){.hero-title .hl:hover{transform:translateY(-.06em) rotate(-4deg);color:var(--pink-light)}}
+/* touch screens: the letters hop once when the page opens, and again whenever you tap one */
+.hero-title.hello .hl{animation:hl-pop .8s var(--ease) both;animation-delay:calc(var(--i,0) * 90ms)}
+.hero-title .hl.pop{animation:hl-pop .8s var(--ease)}
+@keyframes hl-pop{0%,100%{transform:none}35%{transform:translateY(-.08em) rotate(-5deg);color:var(--pink-light)}70%{transform:translateY(.01em)}}
 .hero-info{grid-column:1;grid-row:2;align-self:start;margin-top:clamp(18px,2.4vw,30px)}
 .hero-poster{grid-column:2;grid-row:1/3;position:relative;justify-self:end;width:min(100%,640px);aspect-ratio:1;margin:0 calc(var(--gutter) * -.6) 0 0;cursor:pointer;animation:hero-float 9s ease-in-out infinite alternate}
 .hero-poster::before{content:"";position:absolute;inset:6%;border-radius:50%;background:radial-gradient(circle,rgba(127,176,230,.12),transparent 66%);pointer-events:none;opacity:.8;transition:opacity .6s ease,transform .8s var(--ease)}
-.hero-poster:hover::before{opacity:1;transform:scale(1.08)}
+.hero-poster.awake::before{opacity:1;transform:scale(1.08)}
 .hero-poster img{position:relative;width:100%;height:100%;object-fit:contain;filter:contrast(1.06) brightness(.92);-webkit-mask-image:radial-gradient(ellipse 64% 64% at 50% 50%,#000 44%,transparent 76%);mask-image:radial-gradient(ellipse 64% 64% at 50% 50%,#000 44%,transparent 76%);transition:filter .6s ease,scale .7s var(--ease);will-change:transform}
-.hero-poster:hover img{filter:contrast(1.08) brightness(1.02);scale:1.035}
+.hero-poster.awake img{filter:contrast(1.08) brightness(1.02);scale:1.035}
 @keyframes hero-float{from{transform:translateY(8px)}to{transform:translateY(-10px)}}
 .doodles{position:absolute;inset:0;pointer-events:none}
 .doodle{position:absolute;width:calc(var(--k) * 1%);aspect-ratio:1;margin:calc(var(--k) * -.5%) 0 0 calc(var(--k) * -.5%);transition:translate .8s var(--spring)}
 .doodle svg{display:block;width:100%;height:100%;overflow:visible;animation:twinkle var(--d,5s) ease-in-out infinite alternate;animation-delay:var(--delay,0s)}
-.hero-poster:hover .doodle{translate:var(--ox) var(--oy)}
+.hero-poster.awake .doodle{translate:var(--ox) var(--oy)}
+/* on a mouse the artwork wakes while you point at it; on a touch screen a tap wakes it for a moment (script.js) */
+@media (hover:hover){
+  .hero-poster:hover::before{opacity:1;transform:scale(1.08)}
+  .hero-poster:hover img{filter:contrast(1.08) brightness(1.02);scale:1.035}
+  .hero-poster:hover .doodle{translate:var(--ox) var(--oy)}
+}
 .hero-poster.burst .doodle svg{animation:doodle-spin .9s var(--ease) both}
 @keyframes twinkle{from{opacity:.55;transform:scale(.88) rotate(-6deg)}to{opacity:1;transform:scale(1.06) rotate(6deg)}}
 @keyframes doodle-spin{0%{transform:scale(1) rotate(0)}40%{transform:scale(1.45) rotate(160deg)}100%{transform:scale(1) rotate(360deg)}}
@@ -189,7 +228,8 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
 .realm-strip a{display:flex;flex-direction:column;justify-content:space-between;gap:24px;min-height:140px;padding:18px;text-decoration:none}
 .realm-strip small{font:600 .8rem/1.3 var(--sans);color:var(--text-soft)}
 .realm-strip strong{font:600 1.3rem/1.1 var(--serif);transition:color .25s ease}
-.realm-strip a:hover strong{color:var(--pink-light)}
+.realm-strip a.is-focus strong{color:var(--pink-light)}
+@media (hover:hover){.realm-strip a:hover strong{color:var(--pink-light)}}
 .map{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .map a{display:flex;flex-direction:column;min-height:200px;padding:22px;text-decoration:none}
 .map small{font:500 .95rem/1 var(--nums);letter-spacing:.06em;color:var(--pink)}
@@ -242,8 +282,9 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
 .realm-page{padding-bottom:clamp(56px,7vw,100px)}
 .realm-hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);gap:24px clamp(32px,6vw,96px);align-items:center;padding-top:clamp(40px,5vw,72px);padding-bottom:clamp(28px,4vw,48px)}
 .crumb{display:flex;flex-wrap:wrap;gap:8px;font:600 .9rem/1.3 var(--sans);color:var(--text-soft);margin:0 0 20px}
-.crumb a{color:var(--pink);text-decoration:none}
-.crumb a:hover{color:var(--pink-light)}
+.crumb a{color:var(--pink);text-decoration:none;padding:12px 0;margin:-12px 0}
+.crumb a.is-pressed{color:var(--pink-light)}
+@media (hover:hover){.crumb a:hover{color:var(--pink-light)}}
 .realm-hero h1{font-size:clamp(2.8rem,6.4vw,5.4rem)}
 .tagline{margin:16px 0 0;font:italic 500 clamp(1.4rem,2.3vw,2rem)/1.2 var(--serif);color:var(--pink)}
 .tagline span{color:var(--pink-light)}
@@ -347,8 +388,9 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
 .reg{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:clamp(24px,4vw,56px);align-items:start;padding-bottom:clamp(56px,7vw,100px)}
 .reg-panel{padding:clamp(24px,3vw,40px);border-radius:var(--r-lg)}
 .reg-switch{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:24px;padding:6px;border-radius:var(--r-sm);background:var(--bg)}
-.reg-switch button{font:600 .95rem/1.2 var(--sans);padding:12px 10px;border:0;border-radius:8px;background:transparent;color:var(--text-soft);cursor:pointer;transition:background-color .25s ease,color .25s ease}
-.reg-switch button:hover{color:var(--text)}
+.reg-switch button{font:600 .95rem/1.2 var(--sans);padding:12px 10px;border:0;border-radius:8px;background:transparent;color:var(--text-soft);cursor:pointer;transition:background-color .25s ease,color .25s ease,transform .25s var(--ease)}
+.reg-switch button.is-pressed{color:var(--text);transform:scale(.96)}
+@media (hover:hover){.reg-switch button:hover{color:var(--text)}}
 .reg-switch button.active{background:var(--pink);color:var(--on-pink)}
 .reg-panel fieldset{border:0;margin:0;padding:0;min-width:0}
 .reg-field{display:none}
@@ -356,7 +398,7 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
 .field{margin-top:16px}
 .field label{display:block;font:600 .88rem/1 var(--sans);color:var(--text-soft);margin-bottom:8px}
 .field input,.field select{display:block;width:100%;font:inherit;color:var(--text);background-color:var(--bg);border:1px solid var(--edge);border-radius:10px;padding:13px 14px;-webkit-appearance:none;appearance:none;transition:border-color .25s ease,box-shadow .25s ease}
-.field input:hover,.field select:hover{border-color:var(--edge-strong)}
+@media (hover:hover){.field input:hover,.field select:hover{border-color:var(--edge-strong)}}
 .field input:focus,.field select:focus{outline:none;border-color:var(--pink);box-shadow:0 0 0 3px rgba(208,118,143,.18)}
 .field select{padding-right:44px;text-overflow:ellipsis;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%23f3eee8' stroke-width='2'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
@@ -379,7 +421,13 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
 .site-foot p{margin:16px 0 0;color:var(--text-soft);max-width:42ch}
 .foot-links{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px;font:600 1.15rem/1.35 var(--serif)}
 .foot-links a{display:inline-block;text-decoration:none}
-.foot-links a:hover{color:var(--pink-light)}
+.foot-links a.is-pressed{color:var(--pink-light);transform:translateX(4px)}
+@media (hover:hover){.foot-links a:hover{color:var(--pink-light)}}
+/* touch screens: taller footer links, so each one is a comfortable thumb target */
+@media (hover:none){
+  .foot-links{row-gap:0}
+  .foot-links a{padding:9px 0}
+}
 .foot-bottom{grid-column:1/-1;margin:10px 0 0 !important;font:500 .88rem/1.4 var(--sans);color:var(--text-faint) !important;max-width:none !important}
 
 /* hover: things you can act on lift a little, their outline appears, and a soft light follows the cursor inside them.
@@ -424,6 +472,21 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
   body:has(:is(.realm-card,.realm-strip a,.map a,.principles>div,.disc-list a,.org-node,.exp-list li,.tile,.lab-node,.faq-item,.info-card,.pager a,.countdown-grid>div):hover) :is(.particles,.ambient){opacity:.4}
 }
 
+/* touch screens have no hover, so script.js gives the same reactions two other triggers:
+   pressing a box sinks it slightly and lights it from under your finger (.is-pressed),
+   and as you scroll, the box crossing the middle of the screen shows its outline and light (.is-focus). */
+:is(.realm-strip a,.map a,.principles>div,.disc-list a,.realm-card,.pager a,.org-node,.tile,.info-card,.faq-item,.exp-list li,.timeline li).is-focus{border-color:var(--edge-strong)}
+:is(.realm-strip a,.map a,.principles>div,.disc-list a,.realm-card,.pager a,.org-node,.tile,.info-card,.faq-item,.exp-list li).is-focus::after{opacity:.75}
+.realm-card.is-focus .glyph{transform:rotate(-8deg) scale(1.06)}
+.timeline li.is-focus::before{transform:rotate(90deg) scale(1.25)}
+.t4.is-focus img{transform:scale(1.04)}
+.glyph-panel.in-view svg{transform:rotate(6deg) scale(1.04);transition-delay:.2s}
+:is(.realm-strip a,.map a,.principles>div,.disc-list a,.realm-card,.pager a,.org-node,.tile,.info-card,.faq-item,.exp-list li,.countdown-grid>div,.facts>div,.glyph-panel,.lab-node).is-pressed,
+.reveal-on .reveal>li.in-view.is-pressed{transform:scale(.975);border-color:var(--edge-strong);transition-duration:.15s}
+:is(.realm-strip a,.map a,.principles>div,.disc-list a,.realm-card,.pager a,.org-node,.tile,.info-card,.faq-item,.exp-list li,.countdown-grid>div,.facts>div,.glyph-panel,.lab-node).is-pressed::after{opacity:1;transition-duration:.15s}
+.menu-btn.is-pressed,.site-nav .nav-cta.is-pressed{transform:scale(.95)}
+.logo.is-pressed{transform:scale(.94)}
+
 /* responsive */
 @media (max-width:1100px){
   .realm-strip{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -446,7 +509,8 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
   .glyph-panel{order:-1;max-width:200px;justify-self:start}
   .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
   .exp-head{position:static}
-  .lab-stage{order:-1;top:84px;z-index:5;width:100%;max-width:400px;justify-self:center}
+  /* the diagram stays pinned above the list; on short screens it shrinks so the list still has room */
+  .lab-stage{order:-1;top:78px;z-index:5;width:100%;max-width:min(400px,46vh);justify-self:center;background:var(--surface-2);box-shadow:0 18px 30px -18px rgba(3,8,20,.95)}
 }
 @media (max-width:760px){
   .ambient-item{transform:scale(.7)}
@@ -473,6 +537,11 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
   .row2,.pager{grid-template-columns:1fr}
   .pager .next{text-align:left}
   .org-node{min-width:0;width:100%}
+  /* bigger wheel labels for phones; the four side labels step outward so they clear their dots */
+  .disc-wheel text{font-size:18px}
+  .disc-wheel text:nth-of-type(3),.disc-wheel text:nth-of-type(4){transform:translateX(7px)}
+  .disc-wheel text:nth-of-type(8),.disc-wheel text:nth-of-type(9){transform:translateX(-7px)}
+  .disc-wheel text:nth-of-type(5),.disc-wheel text:nth-of-type(7){transform:translateY(6px)}
 }
 @media (max-width:400px){
   .principles,.disc-list{grid-template-columns:1fr}
