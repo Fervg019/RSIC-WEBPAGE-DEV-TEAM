@@ -1,20 +1,19 @@
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
+const { createClient } = require("@supabase/supabase-js");
+require("dotenv").config({ path: __dirname + "/.env" });
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Health check route
-app.get("/api/health", (req, res) => {
-  res.json({ status: "success", message: "RSIC Backend is running!" });
-});
+// Initialize Supabase Client
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Registration endpoint preview
-app.post("/api/register", (req, res) => {
+app.post("/api/register", async (req, res) => {
   const {
     route,
     name,
@@ -27,34 +26,45 @@ app.post("/api/register", (req, res) => {
     delegates,
   } = req.body;
 
-  // Handle Delegate Route
-  if (route === "delegate") {
-    if (!name || !email) {
-      return res.status(400).json({ error: "Name and email are required." });
-    }
-    console.log(`[DELEGATE REGISTRATION] ${name} (${email}) - Realm: ${realm}`);
+  // 1. Validation
+  if (route === "delegate" && (!name || !email)) {
+    return res.status(400).json({ error: "Name and email are required." });
+  }
+  if (route === "school" && (!school || !contactEmail)) {
     return res
-      .status(200)
-      .json({ message: "Delegate registration received successfully!" });
+      .status(400)
+      .json({ error: "School name and contact email are required." });
   }
 
-  // Handle School Route
-  if (route === "school") {
-    if (!school || !contactEmail) {
-      return res
-        .status(400)
-        .json({ error: "School name and contact email are required." });
-    }
-    console.log(`[SCHOOL REGISTRATION] ${school} - Contact: ${contactEmail}`);
+  // 2. Prepare payload for PostgreSQL table
+  const payload = {
+    route,
+    name: route === "delegate" ? name : null,
+    email: route === "delegate" ? email : null,
+    phone: route === "delegate" ? phone : null,
+    realm: route === "delegate" ? realm : null,
+    school: route === "school" ? school : null,
+    contact_name: route === "school" ? contactName : null,
+    contact_email: route === "school" ? contactEmail : null,
+    delegates: route === "school" ? parseInt(delegates, 10) || null : null,
+  };
+
+  // 3. Save entry to Supabase
+  const { data, error } = await supabase
+    .from("registrations")
+    .insert([payload]);
+
+  if (error) {
+    console.error("Supabase Error:", error);
     return res
-      .status(200)
-      .json({ message: "School registration received successfully!" });
+      .status(500)
+      .json({ error: "Failed to save registration to database." });
   }
 
-  return res.status(400).json({ error: "Invalid registration route." });
+  return res
+    .status(200)
+    .json({ message: "Registration submitted and saved successfully!" });
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
