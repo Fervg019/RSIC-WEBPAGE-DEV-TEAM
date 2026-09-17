@@ -68,3 +68,25 @@ app.post("/api/register", async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Admin endpoint to fetch all registrations
+app.get("/api/admin/registrations", async (req, res) => {
+  const adminPassword = req.headers["x-admin-password"];
+
+  // Check against environment variable
+  if (!adminPassword || adminPassword !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ error: "Unauthorized: Invalid password" });
+  }
+
+  const { data, error } = await supabase
+    .from("registrations")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Fetch Error:", error);
+    return res.status(500).json({ error: "Failed to fetch registrations." });
+  }
+
+  return res.status(200).json(data);
+});

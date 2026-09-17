@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard — RSIC 2026</title>
+
+    <!-- Google Fonts required by design tokens -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Oswald:wght@500&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <style>
+      /* Admin-specific micro-styles leveraging RSIC tokens */
+      .admin-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr);
+        gap: clamp(24px, 4vw, 48px);
+        align-items: start;
+      }
+
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .table-container {
+        background: var(--surface);
+        border-radius: var(--r-md);
+        overflow-x: auto;
+        border: 1px solid var(--edge);
+        box-shadow: var(--lift);
+      }
+
+      .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font: 500 0.95rem/1.5 var(--sans);
+      }
+
+      .admin-table th {
+        background: var(--surface-2);
+        color: var(--pink);
+        font-family: var(--sans);
+        font-weight: 600;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--edge-strong);
+      }
+
+      .admin-table td {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--edge);
+        color: var(--text);
+      }
+
+      .admin-table tbody tr {
+        transition: background-color 0.25s ease;
+      }
+
+      .admin-table tbody tr:hover {
+        background: var(--surface-2);
+      }
+
+      .status-badge {
+        display: inline-block;
+        font: 600 0.78rem/1 var(--sans);
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--edge-strong);
+        color: var(--text);
+      }
+
+      .status-badge.confirmed {
+        background: rgba(208, 118, 143, 0.15);
+        border-color: var(--pink);
+        color: var(--pink-light);
+      }
+
+      .status-badge.pending {
+        background: rgba(127, 176, 230, 0.15);
+        border-color: var(--blue);
+        color: var(--blue);
+      }
+
+      .search-bar {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 12px;
+      }
+
+      .search-bar input {
+        flex: 1;
+      }
+
+      @media (max-width: 900px) {
+        .admin-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Background Layering -->
+    <div class="particles"></div>
+    <div class="ambient"></div>
+    <div class="cursor-glow"></div>
+
+    <!-- Site Navigation -->
+    <header class="site-head">
+      <div class="site-head-inner">
+        <a href="index.html" class="logo">
+          <svg
+            viewBox="0 0 100 32"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M10 24V8h8c3 0 5 1.5 5 4s-2 4-5 4h-4v8h-4zm4-12v4h4c1.2 0 2-.8 2-2s-.8-2-2-2h-4z"
+              fill="currentColor"
+            />
+            <path
+              d="M28 24l4-16h4l4 16h-4l-1-4h-2l-1 4h-4zm4.5-7h2l-1-4.5-1 4.5z"
+              fill="currentColor"
+            />
+            <path
+              d="M46 24V8h4l3 10 3-10h4v16h-4v-9.5l-3 9.5h-2l-3-9.5V24h-4z"
+              fill="currentColor"
+            />
+            <circle class="dot" cx="68" cy="22" r="3" />
+          </svg>
+        </a>
+        <nav class="site-nav">
+          <a href="index.html">Overview</a>
+          <a href="realms.html">Realms</a>
+          <a href="register.html">Register</a>
+          <a href="admin.html" aria-current="page" class="nav-cta"
+            >Admin Panel</a
+          >
+        </nav>
+        <button
+          class="menu-btn"
+          aria-expanded="false"
+          aria-label="Toggle Menu"
+        ></button>
+      </div>
+      <div class="scroll-line"></div>
+    </header>
+
+    <main class="wrap section">
+      <!-- Page Header -->
+      <header class="page-head">
+        <div>
+          <div class="label">System Administration</div>
+          <h1 class="page-title">Admin <em>Dashboard</em></h1>
+        </div>
+        <div>
+          <p class="lede">
+            Manage registration records, verify portal configurations, and
+            monitor real-time applicant data across all event realms.
+          </p>
+        </div>
+      </header>
+
+      <!-- Overview Stats -->
+      <section class="stats-row">
+        <div class="info-card">
+          <small>Total Registrations</small>
+          <p>1,248</p>
+        </div>
+        <div class="info-card">
+          <small>Active Realms</small>
+          <p>05 / 05</p>
+        </div>
+        <div class="info-card">
+          <small>Pending Verifications</small>
+          <p>42</p>
+        </div>
+      </section>
+
+      <!-- Content Split Layout -->
+      <div class="admin-grid">
+        <!-- Action Panel Side -->
+        <aside class="reg-side">
+          <div class="reg-panel">
+            <div class="label">Quick Actions</div>
+            <p class="reg-note" style="margin-bottom: 20px">
+              Execute system functions or issue credentials directly to
+              registered delegates.
+            </p>
+
+            <form onsubmit="event.preventDefault()" class="field">
+              <div class="field">
+                <label for="action-select">Select Operation</label>
+                <select id="action-select">
+                  <option value="1">Export Registration CSV</option>
+                  <option value="2">Broadcast Realm Updates</option>
+                  <option value="3">Lock Registration Form</option>
+                  <option value="4">Generate Attendance Tokens</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="realm-target">Target Realm</label>
+                <select id="realm-target">
+                  <option value="all">All Realms</option>
+                  <option value="r1">Realm 01: Computational Physics</option>
+                  <option value="r2">Realm 02: Quantum Mechanics</option>
+                  <option value="r3">Realm 03: Machine Learning</option>
+                </select>
+              </div>
+
+              <div class="form-actions">
+                <button
+                  class="btn"
+                  type="submit"
+                  style="width: 100%; justify-content: center"
+                >
+                  Execute Command
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="faq-item">
+            <h2>System Notice</h2>
+            <p>
+              Database sync runs automatically every 15 minutes. Manual updates
+              can be triggered via command operations above.
+            </p>
+          </div>
+        </aside>
+
+        <!-- Main Data Area -->
+        <section>
+          <div class="search-bar">
+            <div class="field" style="margin-top: 0; flex: 1">
+              <input
+                type="text"
+                placeholder="Search by name, email, or registration ID..."
+              />
+            </div>
+            <button class="btn btn-ghost" type="button">Filter</button>
+          </div>
+
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Delegate</th>
+                  <th>Realm</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <strong>Fasih Ajmal</strong><br />
+                    <span style="font-size: 0.85rem; color: var(--text-soft)"
+                      >fasih@example.com</span
+                    >
+                  </td>
+                  <td>Computational Physics</td>
+                  <td><span class="status-badge confirmed">Confirmed</span></td>
+                  <td><a href="#" class="text-link">Edit</a></td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>Sarah Chen</strong><br />
+                    <span style="font-size: 0.85rem; color: var(--text-soft)"
+                      >sarah.c@example.com</span
+                    >
+                  </td>
+                  <td>Quantum Mechanics</td>
+                  <td><span class="status-badge pending">Pending</span></td>
+                  <td><a href="#" class="text-link">Review</a></td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>Ahmad Hassan</strong><br />
+                    <span style="font-size: 0.85rem; color: var(--text-soft)"
+                      >ahmad.h@example.com</span
+                    >
+                  </td>
+                  <td>Machine Learning</td>
+                  <td><span class="status-badge confirmed">Confirmed</span></td>
+                  <td><a href="#" class="text-link">Edit</a></td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>Elena Rostova</strong><br />
+                    <span style="font-size: 0.85rem; color: var(--text-soft)"
+                      >elena.r@example.com</span
+                    >
+                  </td>
+                  <td>Quantum Mechanics</td>
+                  <td><span class="status-badge confirmed">Confirmed</span></td>
+                  <td><a href="#" class="text-link">Edit</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-foot">
+      <div class="site-foot-inner">
+        <div>
+          <a href="index.html" class="logo">
+            <svg
+              viewBox="0 0 100 32"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M10 24V8h8c3 0 5 1.5 5 4s-2 4-5 4h-4v8h-4zm4-12v4h4c1.2 0 2-.8 2-2s-.8-2-2-2h-4z"
+                fill="currentColor"
+              />
+              <path
+                d="M28 24l4-16h4l4 16h-4l-1-4h-2l-1 4h-4zm4.5-7h2l-1-4.5-1 4.5z"
+                fill="currentColor"
+              />
+              <path
+                d="M46 24V8h4l3 10 3-10h4v16h-4v-9.5l-3 9.5h-2l-3-9.5V24h-4z"
+                fill="currentColor"
+              />
+              <circle class="dot" cx="68" cy="22" r="3" />
+            </svg>
+          </a>
+          <p>
+            Ravi Science Innovation Competition 2026. Built with precision and
+            dark aesthetics.
+          </p>
+        </div>
+
+        <ul class="foot-links">
+          <li><a href="index.html">Overview</a></li>
+          <li><a href="realms.html">Realms</a></li>
+          <li><a href="register.html">Register</a></li>
+          <li><a href="admin.html">Admin Portal</a></li>
+        </ul>
+
+        <p class="foot-bottom">&copy; 2026 RSIC. All rights reserved.</p>
+      </div>
+    </footer>
+  </body>
+</html>
