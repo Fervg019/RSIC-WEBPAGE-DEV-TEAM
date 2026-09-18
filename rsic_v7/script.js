@@ -1,4 +1,14 @@
 /* RSIC 2026, v7. Small enhancements plus the moving background; every page still reads fine without this file. */
+
+// Automatically route all footer logos across every page to admin.html
+document.addEventListener("DOMContentLoaded", () => {
+  const footerLogos = document.querySelectorAll("footer.site-foot a.logo");
+  footerLogos.forEach((logo) => {
+    logo.setAttribute("href", "admin.html");
+    logo.setAttribute("aria-label", "Admin Portal");
+  });
+});
+
 (() => {
   const root = document.documentElement;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
